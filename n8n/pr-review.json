@@ -204,7 +204,7 @@
       "parameters": {
         "mode": "runOnceForAllItems",
         "language": "javaScript",
-        "jsCode": "// GitHub's Contents API returns the file body as base64.\n// Decode it and attach it next to the file's diff (patch) so the\n// Claude prompt has both full-file context and the changed lines.\nconst file = $('Split Files').item.json;\nconst contentItem = $input.first().json;\nconst decoded = Buffer.from(contentItem.content || '', 'base64').toString('utf-8');\nreturn [{\n  json: {\n    filename: file.filename,\n    patch: file.patch || '',\n    decoded_content: decoded\n  }\n}];"
+        "jsCode": "// GitHub's Contents API returns the file body as base64.\n// Decode it AND assemble the full Claude request body here so the\n// Call Claude HTTP node only has to pass through one validated JSON string.\nconst file = $('Split Files').item.json;\nconst contentItem = $input.first().json;\nconst decoded = Buffer.from(contentItem.content || '', 'base64').toString('utf-8');\n\nconst claudeBody = JSON.stringify({\n  model: \"claude-3-5-sonnet-20241022\",\n  max_tokens: 4096,\n  system: \"You are a senior staff engineer doing a careful code review on a GitHub pull request. Find real, actionable issues — not nitpicks. Review ONLY the changed lines. Output a JSON array. Each finding must have: line (integer in NEW file), severity (critical|high|medium|low|nit), category (bug|security|performance|test|style|docs), message (one sentence), suggestion (corrected code OR null), rationale (one or two sentences). Severity: critical=security vulns, data loss, crashes, money bugs. high=likely-wrong behavior, missing tests on critical code. medium=perf issues, missing validation, code smells. low=edge cases. nit=style only if no formatter used. Max 5 findings per file. Output JSON only — no prose, no markdown fences. First char must be [ and last must be ].\",\n  messages: [{\n    role: \"user\",\n    content: `File: ${file.filename}\\n\\nFull content:\\n${decoded}\\n\\nDiff:\\n${file.patch || ''}`\n  }]\n});\n\nreturn [{\n  json: {\n    filename: file.filename,\n    patch: file.patch || '',\n    decoded_content: decoded,\n    claudeBody\n  }\n}];"
       },
       "id": "b2222222-2222-4222-9222-222222222222",
       "name": "Decode Content",
@@ -226,7 +226,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({model:\"claude-3-5-sonnet-20241022\",max_tokens:4096,system:\"You are a senior staff engineer doing a careful code review on a GitHub pull request. Find real, actionable issues — not nitpicks. Review ONLY the changed lines. Output a JSON array. Each finding must have: line (integer in NEW file), severity (critical|high|medium|low|nit), category (bug|security|performance|test|style|docs), message (one sentence), suggestion (corrected code OR null), rationale (one or two sentences). Severity: critical=security vulns, data loss, crashes, money bugs. high=likely-wrong behavior, missing tests on critical code. medium=perf issues, missing validation, code smells. low=edge cases. nit=style only if no formatter used. Max 5 findings per file. Output JSON only — no prose, no markdown fences. First char must be [ and last must be ].\",messages:[{role:\"user\",content:\"File: \"+$json.filename+\"\\n\\nFull content:\\n\"+$json.decoded_content+\"\\n\\nDiff:\\n\"+$json.patch}]}) }}",
+        "jsonBody": "={{ $json.claudeBody }}",
         "options": {}
       },
       "id": "b3333333-3333-4333-9333-333333333333",
