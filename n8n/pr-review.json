@@ -1,0 +1,510 @@
+{
+  "name": "pr-review",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pr-review",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1111111-1111-4111-9111-111111111111",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-200, 300],
+      "webhookId": "pr-review-webhook-id"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "ok",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "a2222222-2222-4222-9222-222222222222",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [40, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Verify GitHub's HMAC-SHA256 signature on the webhook body.\n// Rejects the request if GITHUB_WEBHOOK_SECRET on n8n side doesn't\n// match the secret configured in the GitHub webhook UI.\nconst crypto = require('crypto');\nconst item = $input.first();\nconst signature = item.json.headers['x-hub-signature-256'];\nconst rawBody = JSON.stringify(item.json.body);\nconst expected = 'sha256=' + crypto\n  .createHmac('sha256', $env.GITHUB_WEBHOOK_SECRET)\n  .update(rawBody)\n  .digest('hex');\nif (!signature || signature !== expected) {\n  throw new Error('Invalid HMAC signature — request rejected');\n}\nreturn [item];"
+      },
+      "id": "a3333333-3333-4333-9333-333333333333",
+      "name": "Verify HMAC",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.body.action }}",
+              "rightValue": "opened",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.body.action }}",
+              "rightValue": "ready_for_review",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "a4444444-4444-4444-9444-444444444444",
+      "name": "IF Action Is Opened",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "owner",
+              "value": "={{ $json.body.repository.owner.login }}",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "repo",
+              "value": "={{ $json.body.repository.name }}",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "pr_number",
+              "value": "={{ $json.body.number }}",
+              "type": "number"
+            },
+            {
+              "id": "f4",
+              "name": "pr_title",
+              "value": "={{ $json.body.pull_request.title }}",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "author",
+              "value": "={{ $json.body.pull_request.user.login }}",
+              "type": "string"
+            },
+            {
+              "id": "f6",
+              "name": "head_sha",
+              "value": "={{ $json.body.pull_request.head.sha }}",
+              "type": "string"
+            },
+            {
+              "id": "f7",
+              "name": "github_pr_id",
+              "value": "={{ $json.body.pull_request.id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a5555555-5555-4555-9555-555555555555",
+      "name": "Extract PR Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [760, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO prs (github_pr_id, repo, pr_number, title, author, head_sha)\nVALUES (\n  {{ $json.github_pr_id }},\n  '{{ $json.owner }}/{{ $json.repo }}',\n  {{ $json.pr_number }},\n  $$ {{ $json.pr_title }} $$,\n  '{{ $json.author }}',\n  '{{ $json.head_sha }}'\n)\nON CONFLICT (repo, pr_number) DO UPDATE\n  SET head_sha = EXCLUDED.head_sha,\n      reviewed_at = NOW()\nRETURNING id;",
+        "options": {}
+      },
+      "id": "a6666666-6666-4666-9666-666666666666",
+      "name": "Upsert PR Row",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1000, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $('Extract PR Fields').first().json.owner }}/{{ $('Extract PR Fields').first().json.repo }}/pulls/{{ $('Extract PR Fields').first().json.pr_number }}/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {}
+      },
+      "id": "a7777777-7777-4777-9777-777777777777",
+      "name": "Get PR Files",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1240, 200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Filter out generated/vendored files and huge diffs.\n// What's left is the set of source files Claude will review one-by-one.\nconst skipPatterns = [\n  /package-lock\\.json$/,\n  /yarn\\.lock$/,\n  /pnpm-lock\\.yaml$/,\n  /\\.min\\.js$/,\n  /^dist\\//,\n  /^build\\//,\n  /generated/i,\n  /vendor\\//,\n  /node_modules\\//,\n];\nconst files = $input.all()\n  .map(i => i.json)\n  .filter(f => !skipPatterns.some(p => p.test(f.filename)))\n  .filter(f => (f.changes || 0) < 500);\nreturn files.map(f => ({ json: f }));"
+      },
+      "id": "a8888888-8888-4888-9888-888888888888",
+      "name": "Filter Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1480, 200]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "a9999999-9999-4999-9999-999999999999",
+      "name": "Split Files",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1720, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $('Extract PR Fields').first().json.owner }}/{{ $('Extract PR Fields').first().json.repo }}/contents/{{ $json.filename }}?ref={{ $('Extract PR Fields').first().json.head_sha }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "options": {}
+      },
+      "id": "b1111111-1111-4111-9111-111111111111",
+      "name": "Get File Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1960, 60]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// GitHub's Contents API returns the file body as base64.\n// Decode it and attach it next to the file's diff (patch) so the\n// Claude prompt has both full-file context and the changed lines.\nconst file = $('Split Files').item.json;\nconst contentItem = $input.first().json;\nconst decoded = Buffer.from(contentItem.content || '', 'base64').toString('utf-8');\nreturn [{\n  json: {\n    filename: file.filename,\n    patch: file.patch || '',\n    decoded_content: decoded\n  }\n}];"
+      },
+      "id": "b2222222-2222-4222-9222-222222222222",
+      "name": "Decode Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2200, 60]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-3-5-sonnet-20241022\",\n  \"max_tokens\": 4096,\n  \"system\": \"You are a senior staff engineer doing a careful code review on a GitHub pull request. Your goal is to find real, actionable issues — not nitpicks.\\n\\nYou will receive: the file path, the full file content (for context), and the diff showing only the changed lines.\\n\\nReview ONLY the changed lines. Use the full file for context, but every finding must point at a line in the diff with a + prefix or a context line in a modified hunk.\\n\\nOutput a JSON array. Each finding MUST have this exact shape:\\n{\\n  \\\"line\\\": <integer — line number in the NEW file>,\\n  \\\"severity\\\": \\\"critical\\\" | \\\"high\\\" | \\\"medium\\\" | \\\"low\\\" | \\\"nit\\\",\\n  \\\"category\\\": \\\"bug\\\" | \\\"security\\\" | \\\"performance\\\" | \\\"test\\\" | \\\"style\\\" | \\\"docs\\\",\\n  \\\"message\\\": \\\"<one sentence, no markdown>\\\",\\n  \\\"suggestion\\\": \\\"<corrected code as a single string, OR null>\\\",\\n  \\\"rationale\\\": \\\"<one or two sentences explaining why this matters>\\\"\\n}\\n\\nSeverity guidance:\\n- critical: security vulnerabilities (SQL injection, XSS, hardcoded secrets, auth bypass), data loss bugs, production crashes, money-handling errors.\\n- high: bugs likely to cause incorrect behavior on common paths, missing tests for security or money-handling functions, broken error handling.\\n- medium: performance issues (O(n^2), N+1 queries, unbounded loops), missing input validation, code smells, non-critical race conditions.\\n- low: unlikely-but-possible edge cases, minor robustness wins.\\n- nit: style preferences, naming, comments — only flag if extremely obvious AND no formatter is in use.\\n\\nStrict rules:\\n1. Maximum 5 findings per file. Pick the most important.\\n2. For 'suggestion', output ONLY the corrected lines, no fences. If too involved, set suggestion to null and describe the fix in rationale.\\n3. If the diff is fine, return an empty array [].\\n4. Never flag formatting if a formatter is used (Black, Prettier, gofmt, rustfmt).\\n5. Never flag missing comments unless the code is genuinely confusing.\\n6. Never repeat the same finding on multiple lines.\\n7. Do NOT review test files except to note missing tests on changed code.\\n8. Do NOT flag changes to vendored / generated code.\\n\\nOutput JSON only. No prose. No markdown fences. The first character must be [ and the last must be ].\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"File: {{ $json.filename }}\\n\\nFull content:\\n{{ $json.decoded_content }}\\n\\nDiff:\\n{{ $json.patch }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "b3333333-3333-4333-9333-333333333333",
+      "name": "Call Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2440, 60]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Pull the JSON array out of Claude's text response.\n// Tolerant of prose around the array (we still get the findings).\n// Then enrich each finding with the file path + the PR's DB id +\n// the owner/repo/pr_number so downstream nodes don't need to reach\n// back through the nested loop context.\nconst raw = $input.first().json;\nconst text = (raw.content && raw.content[0] && raw.content[0].text) || '';\nconst start = text.indexOf('[');\nconst end = text.lastIndexOf(']');\nlet findings = [];\nif (start !== -1 && end !== -1) {\n  try { findings = JSON.parse(text.slice(start, end + 1)); } catch (e) { findings = []; }\n}\nconst file = $('Split Files').item.json;\nconst fields = $('Extract PR Fields').first().json;\nconst prDbId = $('Upsert PR Row').first().json.id;\nfindings = findings.map(f => ({\n  ...f,\n  file_path: file.filename,\n  pr_db_id: prDbId,\n  owner: fields.owner,\n  repo: fields.repo,\n  pr_number: fields.pr_number,\n  head_sha: fields.head_sha\n}));\nreturn [{ json: { findings } }];"
+      },
+      "id": "b4444444-4444-4444-9444-444444444444",
+      "name": "Parse Findings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2680, 60]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Drop low-severity findings; cap at 5 per file.\n// Default threshold is 'medium' — edit MIN_SEV if you want stricter\n// or looser posting.\nconst SEV_ORDER = { critical: 4, high: 3, medium: 2, low: 1, nit: 0 };\nconst MIN_SEV = 'medium';\nconst cutoff = SEV_ORDER[MIN_SEV];\nconst findings = ($input.first().json.findings || [])\n  .filter(f => SEV_ORDER[f.severity] >= cutoff)\n  .slice(0, 5);\nreturn [{ json: { findings } }];"
+      },
+      "id": "b5555555-5555-4555-9555-555555555555",
+      "name": "Filter By Severity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2920, 60]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "findings",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "b6666666-6666-4666-9666-666666666666",
+      "name": "Split Findings",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [3160, 60]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $json.owner }}/{{ $json.repo }}/pulls/{{ $json.pr_number }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"body\": \"🤖 **ReviewAI · {{ $json.severity.toUpperCase() }} · {{ $json.category }}**\\n\\n{{ $json.message }}\\n\\n```suggestion\\n{{ $json.suggestion }}\\n```\\n\\n_{{ $json.rationale }}_\",\n  \"commit_id\": \"{{ $json.head_sha }}\",\n  \"path\": \"{{ $json.file_path }}\",\n  \"line\": {{ $json.line }},\n  \"side\": \"RIGHT\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "b7777777-7777-4777-9777-777777777777",
+      "name": "Post Inline Comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3400, 60]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "findings",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "pr_id": "={{ $json.pr_db_id }}",
+            "file_path": "={{ $json.file_path }}",
+            "line_number": "={{ $json.line }}",
+            "severity": "={{ $json.severity }}",
+            "category": "={{ $json.category }}",
+            "message": "={{ $json.message }}",
+            "suggestion": "={{ $json.suggestion }}",
+            "rationale": "={{ $json.rationale }}",
+            "github_comment_id": "={{ $('Post Inline Comment').item.json.id }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "b8888888-8888-4888-9888-888888888888",
+      "name": "Insert Finding",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [3640, 60]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  COUNT(*) FILTER (WHERE severity = 'critical') AS critical,\n  COUNT(*) FILTER (WHERE severity = 'high')     AS high,\n  COUNT(*) FILTER (WHERE severity = 'medium')   AS medium,\n  COUNT(*) FILTER (WHERE severity = 'low')      AS low,\n  COUNT(*) FILTER (WHERE severity = 'nit')      AS nit,\n  COUNT(*) AS total\nFROM findings\nWHERE pr_id = {{ $('Upsert PR Row').first().json.id }};",
+        "options": {}
+      },
+      "id": "b9999999-9999-4999-9999-999999999999",
+      "name": "Count Findings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1960, 460]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('Extract PR Fields').first().json.owner }}/{{ $('Extract PR Fields').first().json.repo }}/issues/{{ $('Extract PR Fields').first().json.pr_number }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"body\": \"## 🤖 ReviewAI · Review Summary\\n\\n**{{ $json.total }} findings** across this PR\\n\\n| Severity | Count |\\n| --- | ---: |\\n| 🔴 Critical | {{ $json.critical }} |\\n| 🟠 High | {{ $json.high }} |\\n| 🟡 Medium | {{ $json.medium }} |\\n| 🟢 Low | {{ $json.low }} |\\n| ⚪ Nit | {{ $json.nit }} |\\n\\nSee inline comments above for details. Push a fix and I'll re-review automatically.\\n\\n— _[ProITBridge ReviewAI](https://proitbridge-reviewai.vercel.app) · Strive For Better Future_\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "c1111111-1111-4111-9111-111111111111",
+      "name": "Post Summary Comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2200, 460]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          { "node": "Respond 200", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Respond 200": {
+      "main": [
+        [
+          { "node": "Verify HMAC", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Verify HMAC": {
+      "main": [
+        [
+          { "node": "IF Action Is Opened", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "IF Action Is Opened": {
+      "main": [
+        [
+          { "node": "Extract PR Fields", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    },
+    "Extract PR Fields": {
+      "main": [
+        [
+          { "node": "Upsert PR Row", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Upsert PR Row": {
+      "main": [
+        [
+          { "node": "Get PR Files", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get PR Files": {
+      "main": [
+        [
+          { "node": "Filter Files", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Filter Files": {
+      "main": [
+        [
+          { "node": "Split Files", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Split Files": {
+      "main": [
+        [
+          { "node": "Count Findings", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Get File Content", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get File Content": {
+      "main": [
+        [
+          { "node": "Decode Content", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Decode Content": {
+      "main": [
+        [
+          { "node": "Call Claude", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call Claude": {
+      "main": [
+        [
+          { "node": "Parse Findings", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse Findings": {
+      "main": [
+        [
+          { "node": "Filter By Severity", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Filter By Severity": {
+      "main": [
+        [
+          { "node": "Split Findings", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Split Findings": {
+      "main": [
+        [
+          { "node": "Post Inline Comment", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Post Inline Comment": {
+      "main": [
+        [
+          { "node": "Insert Finding", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Insert Finding": {
+      "main": [
+        [
+          { "node": "Split Files", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Count Findings": {
+      "main": [
+        [
+          { "node": "Post Summary Comment", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "tags": [],
+  "pinData": {},
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
