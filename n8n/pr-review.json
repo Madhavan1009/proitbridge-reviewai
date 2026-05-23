@@ -226,7 +226,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ $json.claudeBody }}",
+        "jsonBody": "{{ $json.claudeBody }}",
         "options": {}
       },
       "id": "b3333333-3333-4333-9333-333333333333",
