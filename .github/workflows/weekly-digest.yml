@@ -1,0 +1,28 @@
+name: weekly-digest
+
+# Monday 09:00 IST = 03:30 UTC
+on:
+  schedule:
+    - cron: "30 3 * * MON"
+  workflow_dispatch:   # allow manual trigger from the Actions tab
+
+jobs:
+  fire-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute signature and POST to n8n
+        env:
+          N8N_WEBHOOK_URL: ${{ secrets.N8N_WEBHOOK_URL }}
+          N8N_WEBHOOK_SECRET: ${{ secrets.N8N_WEBHOOK_SECRET }}
+        run: |
+          PAYLOAD='{"trigger":"weekly-digest","fired_at":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}'
+          SIG=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$N8N_WEBHOOK_SECRET" -hex | awk '{print "sha256="$2}')
+
+          echo "Posting to $N8N_WEBHOOK_URL"
+          curl -sS -X POST "$N8N_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -H "X-Hub-Signature-256: $SIG" \
+            -d "$PAYLOAD" \
+            --fail-with-body
+          echo
+          echo "Digest fired."
