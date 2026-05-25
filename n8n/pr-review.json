@@ -239,7 +239,7 @@
       "parameters": {
         "mode": "runOnceForAllItems",
         "language": "javaScript",
-        "jsCode": "// Pull the JSON array out of Claude's text response.\n// Tolerant of prose around the array (we still get the findings).\n// Then enrich each finding with the file path + the PR's DB id +\n// the owner/repo/pr_number so downstream nodes don't need to reach\n// back through the nested loop context.\nconst raw = $input.first().json;\nconst text = (raw.content && raw.content[0] && raw.content[0].text) || '';\nconst start = text.indexOf('[');\nconst end = text.lastIndexOf(']');\nlet findings = [];\nif (start !== -1 && end !== -1) {\n  try { findings = JSON.parse(text.slice(start, end + 1)); } catch (e) { findings = []; }\n}\nconst file = $('Split Files').item.json;\nconst fields = $('Extract PR Fields').first().json;\nconst prDbId = $('Upsert PR Row').first().json.id;\nfindings = findings.map(f => ({\n  ...f,\n  file_path: file.filename,\n  pr_db_id: prDbId,\n  owner: fields.owner,\n  repo: fields.repo,\n  pr_number: fields.pr_number,\n  head_sha: fields.head_sha\n}));\nreturn [{ json: { findings } }];"
+        "jsCode": "// Pull the JSON array out of Claude's text response (tolerant of prose).\n// Enrich each finding with file/PR context AND a pre-built GitHub comment\n// body so the Post Inline Comment HTTP node only has to pass through a\n// validated JSON string.\nconst raw = $input.first().json;\nconst text = (raw.content && raw.content[0] && raw.content[0].text) || '';\nconst start = text.indexOf('[');\nconst end = text.lastIndexOf(']');\nlet findings = [];\nif (start !== -1 && end !== -1) {\n  try { findings = JSON.parse(text.slice(start, end + 1)); } catch (e) { findings = []; }\n}\nconst file = $('Split Files').item.json;\nconst fields = $('Extract PR Fields').first().json;\nconst prDbId = $('Upsert PR Row').first().json.id;\n\nfindings = findings.map(f => {\n  const sev = (f.severity || 'medium').toUpperCase();\n  const cat = f.category || '';\n  const sugBlock = f.suggestion\n    ? \"```suggestion\\n\" + f.suggestion + \"\\n```\\n\\n\"\n    : '';\n  const ratBlock = f.rationale ? \"_\" + f.rationale + \"_\" : '';\n  const commentMd = `🤖 **ReviewAI · ${sev} · ${cat}**\\n\\n${f.message}\\n\\n${sugBlock}${ratBlock}`;\n\n  const commentBody = JSON.stringify({\n    body: commentMd,\n    commit_id: fields.head_sha,\n    path: file.filename,\n    line: f.line,\n    side: \"RIGHT\"\n  });\n\n  return {\n    ...f,\n    file_path: file.filename,\n    pr_db_id: prDbId,\n    owner: fields.owner,\n    repo: fields.repo,\n    pr_number: fields.pr_number,\n    head_sha: fields.head_sha,\n    commentBody\n  };\n});\nreturn [{ json: { findings } }];"
       },
       "id": "b4444444-4444-4444-9444-444444444444",
       "name": "Parse Findings",
@@ -279,7 +279,7 @@
         "nodeCredentialType": "githubApi",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"body\": \"🤖 **ReviewAI · {{ $json.severity.toUpperCase() }} · {{ $json.category }}**\\n\\n{{ $json.message }}\\n\\n```suggestion\\n{{ $json.suggestion }}\\n```\\n\\n_{{ $json.rationale }}_\",\n  \"commit_id\": \"{{ $json.head_sha }}\",\n  \"path\": \"{{ $json.file_path }}\",\n  \"line\": {{ $json.line }},\n  \"side\": \"RIGHT\"\n}",
+        "jsonBody": "{{ $json.commentBody }}",
         "options": {
           "response": {
             "response": {
