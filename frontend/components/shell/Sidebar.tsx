@@ -25,7 +25,13 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex w-72 shrink-0 flex-col gap-6 px-4 py-6 dash-sidebar sticky top-0 h-screen">
       <Link href="/" className="block group">
-        <div className="relative w-full aspect-[3.6/1] rounded-2xl overflow-hidden bg-slate-50 ring-1 ring-slate-200 p-2">
+        <div
+          className="relative w-full aspect-[3.6/1] rounded-2xl overflow-hidden p-2 shadow-[0_10px_30px_-12px_rgba(11,29,63,0.25)]"
+          style={{
+            background:
+              "linear-gradient(135deg, #071633 0%, #0b1d3f 55%, #102a55 100%)",
+          }}
+        >
           <Image
             src="/proitbridge-logo.png"
             alt="ProITBridge ReviewAI"
