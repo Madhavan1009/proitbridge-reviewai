@@ -26,13 +26,13 @@ export function SeverityTrendChart({
   data: DashboardStats["severity_trend"];
 }) {
   return (
-    <div className="glass-card p-5">
+    <div className="dash-card p-5">
       <div className="flex items-end justify-between mb-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400 font-semibold">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500 font-semibold">
             7-day finding trend
           </p>
-          <p className="mt-1 text-sm text-slate-200">
+          <p className="mt-1 text-sm text-slate-700">
             Stacked by severity, all watched repos.
           </p>
         </div>
@@ -56,13 +56,13 @@ export function SeverityTrendChart({
               ))}
             </defs>
             <CartesianGrid
-              stroke="rgba(255,255,255,0.06)"
+              stroke="rgba(15,23,42,0.08)"
               strokeDasharray="3 3"
               vertical={false}
             />
             <XAxis
               dataKey="day"
-              stroke="rgba(255,255,255,0.4)"
+              stroke="rgba(15,23,42,0.45)"
               fontSize={11}
               tickFormatter={(d) =>
                 new Date(d).toLocaleDateString(undefined, {
@@ -72,18 +72,19 @@ export function SeverityTrendChart({
               }
             />
             <YAxis
-              stroke="rgba(255,255,255,0.4)"
+              stroke="rgba(15,23,42,0.45)"
               fontSize={11}
               allowDecimals={false}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "#0b1d3f",
-                border: "1px solid rgba(255,255,255,0.12)",
+                backgroundColor: "#ffffff",
+                border: "1px solid rgba(15,23,42,0.12)",
                 borderRadius: "12px",
                 fontSize: "12px",
+                boxShadow: "0 8px 20px -8px rgba(15,23,42,0.15)",
               }}
-              labelStyle={{ color: "#f8fafc" }}
+              labelStyle={{ color: "#0f172a" }}
             />
             <Legend
               wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}

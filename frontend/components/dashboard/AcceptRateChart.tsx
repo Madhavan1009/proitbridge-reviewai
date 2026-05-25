@@ -17,23 +17,23 @@ export function AcceptRateChart({
   data: Array<{ day: string; rate: number }>;
 }) {
   return (
-    <div className="glass-card p-5">
+    <div className="dash-card p-5">
       <div className="flex items-end justify-between mb-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-cyan-300 font-semibold">
+          <p className="text-xs uppercase tracking-[0.18em] text-brand-600 font-semibold">
             The killer metric
           </p>
-          <p className="mt-1 text-base font-semibold text-white">
+          <p className="mt-1 text-base font-semibold text-slate-900">
             Accept rate over time
           </p>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             Proves the bot is genuinely useful — not just noisy.
           </p>
         </div>
         <div className="text-right">
-          <p className="text-3xl font-bold text-white tabular-nums">
+          <p className="text-3xl font-bold text-slate-900 tabular-nums">
             {data[data.length - 1]?.rate ?? 0}
-            <span className="text-base text-slate-400">%</span>
+            <span className="text-base text-slate-500">%</span>
           </p>
           <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">
             Latest
@@ -51,13 +51,13 @@ export function AcceptRateChart({
               </linearGradient>
             </defs>
             <CartesianGrid
-              stroke="rgba(255,255,255,0.06)"
+              stroke="rgba(15,23,42,0.08)"
               strokeDasharray="3 3"
               vertical={false}
             />
             <XAxis
               dataKey="day"
-              stroke="rgba(255,255,255,0.4)"
+              stroke="rgba(15,23,42,0.45)"
               fontSize={11}
               tickFormatter={(d) =>
                 new Date(d).toLocaleDateString(undefined, {
@@ -67,28 +67,29 @@ export function AcceptRateChart({
               }
             />
             <YAxis
-              stroke="rgba(255,255,255,0.4)"
+              stroke="rgba(15,23,42,0.45)"
               fontSize={11}
               domain={[0, 100]}
               tickFormatter={(v) => `${v}%`}
             />
             <ReferenceLine
               y={50}
-              stroke="rgba(245, 158, 11, 0.3)"
+              stroke="rgba(245, 158, 11, 0.5)"
               strokeDasharray="4 4"
               label={{
                 value: "50% baseline",
                 position: "insideTopRight",
-                fill: "rgba(245, 158, 11, 0.8)",
+                fill: "rgba(245, 158, 11, 0.9)",
                 fontSize: 10,
               }}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "#0b1d3f",
-                border: "1px solid rgba(255,255,255,0.12)",
+                backgroundColor: "#ffffff",
+                border: "1px solid rgba(15,23,42,0.12)",
                 borderRadius: "10px",
                 fontSize: "12px",
+                boxShadow: "0 8px 20px -8px rgba(15,23,42,0.15)",
               }}
               formatter={(v: number) => [`${v}%`, "Accept rate"]}
             />

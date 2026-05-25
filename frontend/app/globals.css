@@ -183,6 +183,111 @@ body {
   .diff-ctx {
     border-left: 2px solid transparent;
   }
+
+  /* ───────── Light-theme dashboard scope ─────────
+     Dashboard pages wrap content in <body class="dashboard-light">.
+     This overrides the dark navy gradient with a clean white surface,
+     scoped only to the dashboard so the marketing site stays dark. */
+  body.dashboard-light {
+    background: #f8fafc !important;
+    background-image: none !important;
+    color: #0f172a;
+  }
+
+  .dash-card {
+    @apply bg-white border border-slate-200 rounded-2xl;
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 1px 0 rgba(255, 255, 255, 0.6) inset;
+  }
+
+  .dash-card-hover {
+    @apply transition-colors hover:border-slate-300 hover:bg-slate-50/50;
+  }
+
+  .dash-sidebar {
+    @apply bg-white border-r border-slate-200;
+  }
+
+  .dash-topbar {
+    @apply bg-white/95 backdrop-blur-xl border-b border-slate-200;
+  }
+
+  .dash-nav-link {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm
+           text-slate-600 hover:text-slate-900 hover:bg-slate-100
+           transition-all duration-150;
+  }
+
+  .dash-nav-link-active {
+    @apply text-brand-700 bg-brand-50 border border-brand-100
+           shadow-[0_1px_0_rgba(255,255,255,0.6)_inset];
+  }
+
+  .dash-input {
+    @apply w-full rounded-xl bg-white border border-slate-200
+           px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400
+           focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100
+           transition-all;
+  }
+
+  .dash-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5
+           text-sm font-semibold text-white
+           bg-brand-gradient shadow-sm
+           hover:brightness-110 active:brightness-95
+           transition-all duration-150;
+  }
+
+  .dash-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5
+           text-sm font-medium text-slate-700
+           bg-white border border-slate-200
+           hover:bg-slate-50 hover:border-slate-300
+           transition-all duration-150;
+  }
+
+  .dash-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1
+           text-xs font-medium border;
+  }
+
+  /* Severity chips (light theme) */
+  .sev-critical {
+    @apply text-red-700 border-red-200 bg-red-50;
+  }
+  .sev-high {
+    @apply text-rose-700 border-rose-200 bg-rose-50;
+  }
+  .sev-medium {
+    @apply text-amber-700 border-amber-200 bg-amber-50;
+  }
+  .sev-low {
+    @apply text-emerald-700 border-emerald-200 bg-emerald-50;
+  }
+  .sev-nit {
+    @apply text-slate-600 border-slate-200 bg-slate-100;
+  }
+
+  /* Category chips (light theme) */
+  .cat-bug {
+    @apply text-rose-700 border-rose-200 bg-rose-50;
+  }
+  .cat-security {
+    @apply text-amber-700 border-amber-200 bg-amber-50;
+  }
+  .cat-performance {
+    @apply text-violet-700 border-violet-200 bg-violet-50;
+  }
+  .cat-test {
+    @apply text-cyan-700 border-cyan-200 bg-cyan-50;
+  }
+  .cat-style {
+    @apply text-slate-600 border-slate-200 bg-slate-100;
+  }
+  .cat-docs {
+    @apply text-blue-700 border-blue-200 bg-blue-50;
+  }
 }
 
 @layer utilities {

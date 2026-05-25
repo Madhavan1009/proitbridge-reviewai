@@ -26,11 +26,11 @@ export function CategoryDonut({
   const total = data.reduce((s, d) => s + d.value, 0);
 
   return (
-    <div className="glass-card p-5 h-full">
-      <p className="text-xs uppercase tracking-[0.18em] text-slate-400 font-semibold">
+    <div className="dash-card p-5 h-full">
+      <p className="text-xs uppercase tracking-[0.18em] text-slate-500 font-semibold">
         Category breakdown
       </p>
-      <p className="mt-1 text-sm text-slate-200">
+      <p className="mt-1 text-sm text-slate-700">
         Distribution of findings over the last 7 days.
       </p>
 
@@ -43,7 +43,7 @@ export function CategoryDonut({
                 dataKey="value"
                 innerRadius={48}
                 outerRadius={72}
-                stroke="rgba(11,29,63,0.9)"
+                stroke="#ffffff"
                 strokeWidth={2}
               >
                 {data.map((d) => (
@@ -52,20 +52,21 @@ export function CategoryDonut({
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#0b1d3f",
-                  border: "1px solid rgba(255,255,255,0.12)",
+                  backgroundColor: "#ffffff",
+                  border: "1px solid rgba(15,23,42,0.12)",
                   borderRadius: "10px",
                   fontSize: "12px",
+                  boxShadow: "0 8px 20px -8px rgba(15,23,42,0.15)",
                 }}
               />
             </PieChart>
           </ResponsiveContainer>
           <div className="absolute inset-0 grid place-items-center pointer-events-none">
             <div className="text-center">
-              <p className="text-2xl font-bold text-white tabular-nums">
+              <p className="text-2xl font-bold text-slate-900 tabular-nums">
                 {total}
               </p>
-              <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">
                 Findings
               </p>
             </div>
@@ -76,14 +77,14 @@ export function CategoryDonut({
           {data.map((d) => (
             <li
               key={d.key}
-              className="flex items-center gap-2 text-xs text-slate-300"
+              className="flex items-center gap-2 text-xs text-slate-700"
             >
               <span
                 className="h-2.5 w-2.5 rounded-sm"
                 style={{ background: palette[d.key] }}
               />
               <span className="flex-1">{d.name}</span>
-              <span className="font-mono tabular-nums text-slate-400">
+              <span className="font-mono tabular-nums text-slate-500">
                 {d.value}
               </span>
             </li>

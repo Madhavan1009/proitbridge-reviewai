@@ -46,6 +46,23 @@ export const severityColor: Record<Severity, string> = {
   nit: "text-slate-400 border-slate-400/40 bg-slate-400/10",
 };
 
+export const severityColorLight: Record<Severity, string> = {
+  critical: "sev-critical",
+  high: "sev-high",
+  medium: "sev-medium",
+  low: "sev-low",
+  nit: "sev-nit",
+};
+
+export const categoryToneLight: Record<Category, string> = {
+  bug: "cat-bug",
+  security: "cat-security",
+  performance: "cat-performance",
+  test: "cat-test",
+  style: "cat-style",
+  docs: "cat-docs",
+};
+
 export const severityDot: Record<Severity, string> = {
   critical:
     "bg-risk-critical shadow-[0_0_12px_-2px_rgba(220,38,38,0.9)]",
