@@ -21,6 +21,7 @@ const {
   TableCell,
   Header,
   Footer,
+  ImageRun,
   AlignmentType,
   LevelFormat,
   HeadingLevel,
@@ -37,6 +38,64 @@ const {
   PositionalTabRelativeTo,
   PositionalTabLeader,
 } = require("docx");
+
+// ────────────────────────── image helpers ──────────────────────────
+const ASSETS_DIR = path.join(__dirname, "..", "assets");
+
+function loadImage(filename) {
+  const p = path.join(ASSETS_DIR, filename);
+  if (!fs.existsSync(p)) {
+    console.warn(`[warn] missing asset: ${p}`);
+    return null;
+  }
+  return fs.readFileSync(p);
+}
+
+/**
+ * Embed an asset PNG centered, fit to content width.
+ * Returns an array: [image paragraph, optional caption paragraph].
+ */
+function embedImage(filename, width, height, caption) {
+  const data = loadImage(filename);
+  if (!data)
+    return [
+      new Paragraph({
+        children: [new TextRun(`[image missing: ${filename}]`)],
+      }),
+    ];
+  const para = new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 120, after: 80 },
+    children: [
+      new ImageRun({
+        type: "png",
+        data,
+        transformation: { width, height },
+        altText: {
+          title: caption || filename,
+          description: caption || filename,
+          name: filename,
+        },
+      }),
+    ],
+  });
+  if (!caption) return [para];
+  return [
+    para,
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 0, after: 160 },
+      children: [
+        new TextRun({
+          text: caption,
+          italics: true,
+          size: 18,
+          color: "64748B",
+        }),
+      ],
+    }),
+  ];
+}
 
 // ──────────────────────────── helpers ────────────────────────────
 const NAVY = "0B1D3F";
@@ -323,17 +382,43 @@ content.push(
 // ─── 1. EXECUTIVE SUMMARY ───
 content.push(
   h1("1. Executive Summary"),
-  p(
-    "ProITBridge ReviewAI is a self-hosted, open-source AI-powered code review bot for GitHub pull requests. The bot watches a configured GitHub organization, automatically reviews every pull request opened against any of its watched repositories, and posts inline review comments with severity ratings, categorical classifications, and one-click code suggestions — all within ten seconds of PR creation."
-  ),
-  p(
-    "The system replaces the manual first-pass code review burden that senior engineers typically carry, freeing them to focus on architecture-level reviews while the bot handles consistency checks, security gates, and pattern enforcement. Every PR receives the same standard of scrutiny, every time."
-  ),
-  p(
-    "Built end-to-end on a one hundred percent free-tier infrastructure stack (Railway, Vercel, GitHub Actions, Anthropic API free credits), ReviewAI is the open-source alternative to commercial offerings like CodeRabbit (priced at $24 per developer per month) and integrated IDE review tools. The total operational cost is approximately one cent per pull request reviewed, derived solely from Claude API inference costs."
-  ),
-  p(
-    "This report provides a comprehensive end-to-end documentation of the project covering the problem statement, target users, system architecture, component breakdown, complete workflow, file-level repository structure, deployment guide, end-to-end sample execution, and future roadmap."
+  buildTable(
+    [{ label: "Field" }, { label: "Detail" }],
+    [
+      [
+        { text: "What it is", bold: true },
+        {
+          text: "Open-source AI code review bot for GitHub pull requests — self-hosted, free-tier stack",
+        },
+      ],
+      [
+        { text: "What it does", bold: true },
+        {
+          text: "Reviews every PR within 10 seconds — posts inline comments with severity, category, suggestion, rationale",
+        },
+      ],
+      [
+        { text: "Built with", bold: true },
+        { text: "n8n · Anthropic Claude 4.5 · Next.js 14 · PostgreSQL · Railway · Vercel" },
+      ],
+      [
+        { text: "Replaces", bold: true },
+        { text: "CodeRabbit ($24/dev/mo) · Cursor review · manual first-pass review by senior engineers" },
+      ],
+      [
+        { text: "Cost", bold: true },
+        { text: "$0/month infrastructure (free tiers) + ~$0.01 per PR (Claude inference)" },
+      ],
+      [
+        { text: "License", bold: true },
+        { text: "MIT — fork, host, modify, sell" },
+      ],
+      [
+        { text: "Live demo", bold: true },
+        { text: "proitbridge-reviewai.vercel.app", code: true },
+      ],
+    ],
+    [1800, 7560]
   )
 );
 
@@ -584,64 +669,14 @@ content.push(
 // ─── 6. ARCHITECTURE ───
 content.push(
   h1("6. System Architecture"),
-  h2("6.1 High-Level Architecture Diagram"),
-  p(
-    "The following diagram shows the full system flow from a GitHub pull request event through to inline comments, persistent storage, and dashboard visualization."
+  h2("6.1 High-Level Architecture"),
+  p("The full system in one picture — five components, clear data flow."),
+  ...embedImage(
+    "diagram-architecture.png",
+    620,
+    400,
+    "Figure 1 — GitHub fires a webhook, n8n orchestrates, Claude reviews, Postgres persists, Vercel renders."
   ),
-  code(`                      GitHub Pull Request opens
-                                 │
-                                 ▼
-                  ┌──────────────────────────────────┐
-                  │  n8n on Railway (Docker)         │
-                  │  Webhook: /webhook/pr-review     │
-                  │                                  │
-                  │  Workflow steps:                 │
-                  │  1. Respond 200 (fast ack)       │
-                  │  2. Verify HMAC signature        │
-                  │  3. Filter to opened action      │
-                  │  4. Extract PR fields            │
-                  │  5. Upsert prs row in Postgres   │
-                  │  6. GET PR files via Octokit     │
-                  │  7. Filter generated files       │
-                  │  8. Loop per source file:        │
-                  │     - GET full file content      │
-                  │     - Decode base64 + build body │
-                  │     - POST to Anthropic Claude   │
-                  │     - Parse JSON findings        │
-                  │     - Filter by severity         │
-                  │     - Split into individual rows │
-                  │     - POST inline comment        │
-                  │     - INSERT finding to Postgres │
-                  │  9. After loop:                  │
-                  │     - Count findings             │
-                  │     - POST summary comment       │
-                  └────────┬──────────────┬──────────┘
-                           │              │
-                           ▼              ▼
-              ┌────────────────┐   ┌──────────────────┐
-              │ Anthropic API  │   │ Postgres (Railway)│
-              │ Claude 4.5     │   │ - prs            │
-              │ Haiku / Sonnet │   │ - findings       │
-              └────────────────┘   │ - resolutions    │
-                                   │ - repo_config    │
-                                   └──────────┬───────┘
-                                              │
-                                              ▼
-                            ┌────────────────────────────────┐
-                            │ Next.js dashboard (Vercel)     │
-                            │                                │
-                            │ Public:                        │
-                            │  / (landing page)              │
-                            │  /how-it-works                 │
-                            │  /pricing                      │
-                            │  /docs                         │
-                            │                                │
-                            │ Authenticated:                 │
-                            │  /dashboard (live PR queue)    │
-                            │  /findings (table)             │
-                            │  /analytics (charts)           │
-                            │  /settings (per-repo config)   │
-                            └────────────────────────────────┘`),
   h2("6.2 Component Responsibilities"),
   buildTable(
     [{ label: "Component" }, { label: "Responsibility" }],
@@ -693,68 +728,49 @@ content.push(
   h1("7. End-to-End Workflow"),
   h2("7.1 Mode 1: Event-driven PR Review"),
   p(
-    "The primary mode of operation. A developer opens a pull request on a watched repository, and within ten seconds the bot has posted inline review comments and a summary comment."
+    "A developer opens a PR. Within ten seconds the bot has posted inline comments + a summary. The diagram below shows all 19 n8n nodes in order — colored by node type."
   ),
-  numItem("Developer opens a PR on Madhavan1009/proitbridge-reviewai-demo."),
-  numItem(
-    "GitHub fires a pull_request webhook with action 'opened' to the n8n webhook URL, signed with X-Hub-Signature-256."
+  ...embedImage(
+    "diagram-workflow.png",
+    620,
+    350,
+    "Figure 2 — pr-review workflow: top row is setup, middle row is the per-file loop body, bottom is the done branch."
   ),
-  numItem(
-    "n8n's Respond 200 node returns HTTP 200 immediately so GitHub does not retry."
+  h3("Node groups (color key)"),
+  buildTable(
+    [{ label: "Type" }, { label: "What it does" }, { label: "Nodes" }],
+    [
+      [
+        { text: "Trigger (navy)", bold: true },
+        { text: "Receive webhook + fast 200 ack" },
+        { text: "Webhook · Respond 200" },
+      ],
+      [
+        { text: "Code (amber)", bold: true },
+        { text: "JS logic — HMAC, parse, filter, enrich, build bodies" },
+        { text: "Verify HMAC · Extract Fields · Filter Files · Decode+Build · Parse Findings · Filter Sev" },
+      ],
+      [
+        { text: "HTTP (blue)", bold: true },
+        { text: "External API calls to GitHub + Claude" },
+        { text: "Get PR Files · Get Content · Call Claude · Post Inline · Post Summary" },
+      ],
+      [
+        { text: "Postgres (green)", bold: true },
+        { text: "Persist PR + findings + read totals" },
+        { text: "Upsert PR Row · Insert Finding · Count Findings" },
+      ],
+      [
+        { text: "IF / Split (rose/violet)", bold: true },
+        { text: "Branch by action; loop per file; split findings" },
+        { text: "IF opened · Split Files · Split Findings" },
+      ],
+    ],
+    [1700, 4660, 3000]
   ),
-  numItem(
-    "The Verify HMAC code node recomputes the signature using GITHUB_WEBHOOK_SECRET and rejects if it does not match."
-  ),
-  numItem(
-    "The IF node filters to only 'opened' and 'ready_for_review' actions; other actions short-circuit."
-  ),
-  numItem(
-    "Extract PR Fields lifts owner, repo, pr_number, title, author, head_sha, and github_pr_id into structured fields."
-  ),
-  numItem(
-    "Upsert PR Row writes (or updates) the prs row in Postgres and returns the auto-generated id."
-  ),
-  numItem(
-    "Get PR Files calls the GitHub Files API to list every file changed in the PR with its patch."
-  ),
-  numItem(
-    "Filter Files drops generated artifacts (package-lock.json, *.min.js, dist/, build/, vendor/) and files with more than 500 changed lines."
-  ),
-  numItem(
-    "Split Files iterates each remaining file. For each iteration, the workflow continues through the loop branch."
-  ),
-  numItem(
-    "Get File Content fetches the full file body via the GitHub Contents API."
-  ),
-  numItem(
-    "Decode Content unwraps base64 and assembles the full Claude request body (model, max_tokens, system prompt, user message)."
-  ),
-  numItem(
-    "Call Claude posts the body to https://api.anthropic.com/v1/messages with the Header Auth credential."
-  ),
-  numItem(
-    "Parse Findings extracts the JSON array from Claude's text response and enriches each finding with file path, pr_db_id, owner, repo, pr_number, head_sha, and a pre-built commentBody."
-  ),
-  numItem(
-    "Filter By Severity drops nit/low findings (default threshold is medium) and caps at five findings per file."
-  ),
-  numItem(
-    "Split Findings emits one item per finding for downstream processing."
-  ),
-  numItem(
-    "Post Inline Comment posts a review comment to the GitHub PR using the pre-built commentBody, with severity emoji, suggestion block, and rationale."
-  ),
-  numItem(
-    "Insert Finding writes the finding to Postgres with a reference to the GitHub comment ID."
-  ),
-  numItem(
-    "After all files are processed, Count Findings queries the totals by severity for this PR."
-  ),
-  numItem(
-    "Post Summary Comment posts a final issue comment to the PR with a markdown table of severity counts and a link to the dashboard."
-  ),
+  blank(),
   p(
-    "Total wall-clock latency for a typical three-file PR is approximately eight to fifteen seconds end-to-end, dominated by the Claude API calls."
+    "Total latency for a 3-file PR: 8–15 seconds end-to-end, dominated by Claude API calls."
   ),
   h2("7.2 Mode 2: Re-review on Push (Planned)"),
   p(
@@ -784,70 +800,131 @@ content.push(
 content.push(
   h1("8. Repository Structure"),
   p(
-    "The project is organized as a single repository containing all infrastructure code, frontend source, backend workflow specifications, database schema, and supporting documentation."
+    "One repo, six top-level folders. The table below shows where every concern lives."
   ),
-  code(`proitbridge-reviewai/
-├── README.md                      Top-level overview with deploy badges
-├── DEPLOYMENT.md                  Step-by-step Railway + Vercel + GitHub guide
-├── PROJECT_BRIEF.md               Original product brief
-├── .github/workflows/
-│   └── weekly-digest.yml          Monday 09:00 IST GitHub Actions cron
-├── n8n/                           Workflow specifications + JSON exports
-│   ├── README.md                  Overview of all 4 workflows
-│   ├── pr-review.md               Main reviewer spec (16 nodes)
-│   ├── pr-review.json             Importable n8n workflow JSON (19 nodes)
-│   ├── pr-resync.md               Re-review on push spec
-│   ├── pr-merged.md               Merge-changelog spec
-│   └── weekly-digest.md           Weekly digest spec
-├── frontend/                      Next.js 14 + Tailwind dashboard
-│   ├── app/                       App router pages
-│   │   ├── layout.tsx             Root layout, brand metadata
-│   │   ├── page.tsx               Landing page composition
-│   │   ├── how-it-works/page.tsx  Pipeline deep-dive
-│   │   ├── pricing/page.tsx       3-tier mock pricing
-│   │   ├── docs/page.tsx          Setup guide for forkers
-│   │   └── dashboard/
-│   │       ├── layout.tsx         AppShell wrapper
-│   │       ├── page.tsx           Live PR queue (server component)
-│   │       ├── findings/page.tsx  All findings table
-│   │       ├── analytics/page.tsx Charts + weekly-digest preview
-│   │       └── settings/page.tsx  Per-repo configuration
-│   ├── components/
-│   │   ├── ui/                    Section, StatCard, SeverityBadge, etc.
-│   │   ├── shell/                 Sidebar, Topbar, AppShell, MarketingNav
-│   │   ├── landing/               Hero, DemoSection, BeforeAfter, etc.
-│   │   ├── dashboard/             PRRow, FindingsClient, charts, AutoRefreshChip
-│   │   └── workflow/              WorkflowFlow (React Flow)
-│   ├── lib/
-│   │   ├── db.ts                  Postgres connection pool
-│   │   ├── queries.ts             Dashboard queries with mock fallback
-│   │   ├── types.ts               Shared TypeScript types
-│   │   ├── utils.ts               cn, timeAgo, severity helpers
-│   │   └── mockData.ts            Bundled demo fixtures
-│   ├── public/
-│   │   └── proitbridge-logo.png   Brand mark
-│   ├── package.json
-│   ├── tailwind.config.ts         Brand palette
-│   ├── tsconfig.json
-│   ├── next.config.js
-│   └── vercel.json
-├── prompts/
-│   ├── reviewer.txt               Claude system prompt for code review
-│   └── digest.txt                 Claude prompt for weekly digest
-├── postgres/
-│   └── schema.sql                 prs, findings, resolutions, repo_config + 4 views
-├── demo-bad-prs/                  Scripted bad PR fixtures for video
-│   ├── README.md
-│   ├── 01-sql-injection.md
-│   ├── 02-missing-tests.md
-│   ├── 03-perf-issue.md
-│   ├── 04-hardcoded-secret.md
-│   └── 05-race-condition.md
-└── scripts/                       Operations + maintenance scripts
-    ├── apply-schema.js            Apply postgres/schema.sql
-    ├── seed-demo-data.js          Insert 15 demo PRs + 29 findings
-    ├── validate-workflow.js       Pre-import shape-check for n8n JSON
-    └── generate-report.js         This document generator`)
+  h2("8.1 Top-Level Folders"),
+  buildTable(
+    [{ label: "Folder / File" }, { label: "Purpose" }],
+    [
+      [
+        { text: "README.md", code: true, bold: true },
+        { text: "60-second pitch · architecture diagram · quick start" },
+      ],
+      [
+        { text: "DEPLOYMENT.md", code: true, bold: true },
+        { text: "Phased Railway + Vercel + GitHub webhook walkthrough" },
+      ],
+      [
+        { text: ".github/workflows/", code: true, bold: true },
+        { text: "GitHub Actions — weekly-digest.yml fires Mondays 09:00 IST" },
+      ],
+      [
+        { text: "n8n/", code: true, bold: true },
+        { text: "Workflow specs (markdown) + importable JSON for pr-review" },
+      ],
+      [
+        { text: "frontend/", code: true, bold: true },
+        { text: "Next.js 14 dashboard — landing, docs, /dashboard/* pages" },
+      ],
+      [
+        { text: "prompts/", code: true, bold: true },
+        { text: "Claude system prompts — reviewer.txt + digest.txt" },
+      ],
+      [
+        { text: "postgres/", code: true, bold: true },
+        { text: "schema.sql — 4 tables + 4 analytics views" },
+      ],
+      [
+        { text: "demo-bad-prs/", code: true, bold: true },
+        { text: "5 scripted bad-PR fixtures for video recording" },
+      ],
+      [
+        { text: "scripts/", code: true, bold: true },
+        { text: "Apply schema · seed demo data · validate workflow · generate report · render diagrams" },
+      ],
+      [
+        { text: "assets/", code: true, bold: true },
+        { text: "Generated PNG diagrams used by this report" },
+      ],
+    ],
+    [2400, 6960]
+  ),
+  blank(),
+  h2("8.2 frontend/ Detail"),
+  buildTable(
+    [{ label: "Path" }, { label: "What's there" }],
+    [
+      [
+        { text: "app/page.tsx", code: true },
+        { text: "Landing page — composes Hero, Demo, How It Works, Pricing" },
+      ],
+      [
+        { text: "app/dashboard/page.tsx", code: true },
+        { text: "Live PR Queue — server component, queries Postgres" },
+      ],
+      [
+        { text: "app/dashboard/findings/page.tsx", code: true },
+        { text: "All Findings table with search + severity/category filters" },
+      ],
+      [
+        { text: "app/dashboard/analytics/page.tsx", code: true },
+        { text: "Severity trend + category donut + accept-rate + top files" },
+      ],
+      [
+        { text: "app/dashboard/settings/page.tsx", code: true },
+        { text: "Per-repo config + secrets + Open-n8n CTA" },
+      ],
+      [
+        { text: "components/landing/", code: true },
+        { text: "Hero · DemoSection · BeforeAfter · Pricing · FooterCTA" },
+      ],
+      [
+        { text: "components/dashboard/", code: true },
+        { text: "PRRow · charts · AutoRefreshChip · DataSourcePill" },
+      ],
+      [
+        { text: "components/shell/", code: true },
+        { text: "Sidebar (light) · Topbar (light + Open n8n button) · AppShell" },
+      ],
+      [
+        { text: "lib/queries.ts", code: true },
+        { text: "Postgres queries with mock-data fallback for empty DB" },
+      ],
+      [
+        { text: "lib/db.ts", code: true },
+        { text: "Lazy pg.Pool connection (SSL auto-detected)" },
+      ],
+    ],
+    [3400, 5960]
+  ),
+  blank(),
+  h2("8.3 scripts/ Detail"),
+  buildTable(
+    [{ label: "Script" }, { label: "What it does" }],
+    [
+      [
+        { text: "apply-schema.js", code: true, bold: true },
+        { text: "Apply postgres/schema.sql to Railway Postgres" },
+      ],
+      [
+        { text: "seed-demo-data.js", code: true, bold: true },
+        { text: "Insert 15 demo PRs + 29 findings (idempotent, re-runnable)" },
+      ],
+      [
+        { text: "validate-workflow.js", code: true, bold: true },
+        { text: "Shape-check n8n JSON before import (nodes, connections, types)" },
+      ],
+      [
+        { text: "generate-diagrams.py", code: true, bold: true },
+        { text: "Render the 3 architecture PNGs used in this report" },
+      ],
+      [
+        { text: "generate-report.js", code: true, bold: true },
+        { text: "Produce this Word document (run with NODE_PATH set to global docx)" },
+      ],
+    ],
+    [3000, 6360]
+  )
 );
 
 // ─── 9. DATABASE SCHEMA ───
@@ -1084,104 +1161,83 @@ content.push(
 content.push(
   h1("12. Sample End-to-End Execution"),
   p(
-    "The following sample demonstrates a real end-to-end run of the bot against a deliberately broken pull request."
+    "A developer opens a PR with one Python file containing a SQL injection bug. The timeline below shows what happens, second by second."
   ),
-  h2("12.1 Step 1: Open a Bad PR"),
-  p(
-    "From the demo repository, create a branch containing a Python file with a SQL injection vulnerability."
+  ...embedImage(
+    "diagram-sample-run.png",
+    620,
+    270,
+    "Figure 3 — From git push to bot review in 8.2 seconds."
   ),
-  code(`cd /tmp/proitbridge-reviewai-demo
-git checkout -b demo-sql-injection
-mkdir -p src
-cat > src/auth.py <<'PY'
-"""User authentication and lookup utilities."""
-
-import sqlite3
-
-db = sqlite3.connect("app.db")
-
-
-def get_user(user_id):
-    """Look up a user by ID — used by the support dashboard."""
-    query = f"SELECT * FROM users WHERE id={user_id}"
-    return db.execute(query).fetchone()
-PY
-git add src/auth.py
-git commit -m "Add user lookup endpoint for support team"
-git push -u origin demo-sql-injection
-gh pr create --fill`),
-  h2("12.2 Step 2: Observe the Bot's Response (within 10 seconds)"),
-  p(
-    "GitHub's webhook delivers to n8n. The pipeline executes through all 19 nodes. The bot posts three inline comments on the PR."
-  ),
-  blank(),
+  h2("12.1 The Trigger — One Command"),
+  code(`gh pr create --fill --title "Add user lookup by ID"`),
+  p("Pushes a branch with src/auth.py containing:", { italics: true }),
+  code(`query = f"SELECT * FROM users WHERE id={user_id}"   # SQL injection`),
+  h2("12.2 What the Bot Posts (within 8.2 s)"),
   buildTable(
     [
-      { label: "Comment #" },
       { label: "Line" },
       { label: "Severity" },
       { label: "Category" },
-      { label: "Finding" },
+      { label: "What the bot said" },
     ],
     [
       [
-        { text: "1", bold: true },
-        { text: "10" },
+        { text: "10", bold: true },
         { text: "Critical", color: "DC2626", bold: true },
         { text: "Security" },
-        {
-          text: "SQL injection vulnerability: user_id is interpolated directly into the query string without parameterization",
-        },
+        { text: "SQL injection — user_id interpolated directly into query" },
       ],
       [
-        { text: "2", bold: true },
-        { text: "14" },
+        { text: "14", bold: true },
         { text: "High", color: "EF4444", bold: true },
         { text: "Test" },
-        {
-          text: "No tests cover the new get_user code path; auth.py is a security boundary and needs coverage",
-        },
+        { text: "No tests cover get_user — auth.py is a security boundary" },
       ],
       [
-        { text: "3", bold: true },
-        { text: "5" },
+        { text: "5", bold: true },
         { text: "Medium", color: "F59E0B", bold: true },
         { text: "Bug" },
-        {
-          text: "Module-level DB connection created without error handling or cleanup; unreachable DB at import time crashes the whole module",
-        },
+        { text: "Module-level DB connection lacks error handling + cleanup" },
       ],
     ],
-    [1100, 800, 1300, 1300, 4860]
+    [800, 1500, 1400, 5660]
   ),
   blank(),
-  h2("12.3 Step 3: Bot Posts a Summary Comment"),
-  p(
-    "After the per-finding loop completes, the bot posts a single summary issue comment on the PR with a severity table."
-  ),
-  code(`## 🤖 ReviewAI · Review Summary
+  h2("12.3 Plus a Summary Comment"),
+  code(`🤖 ReviewAI · Review Summary
 
-**3 findings** across this PR
+3 findings across this PR
 
-| Severity | Count |
-| --- | ---: |
-| 🔴 Critical | 1 |
-| 🟠 High | 1 |
-| 🟡 Medium | 1 |
-| 🟢 Low | 0 |
-| ⚪ Nit | 0 |
+| Severity     | Count |
+| ------------ | ----: |
+| 🔴 Critical  |   1   |
+| 🟠 High      |   1   |
+| 🟡 Medium    |   1   |
 
-See inline comments above for details. Push a fix and I'll re-review
-automatically.
-
-— ProITBridge ReviewAI · Strive For Better Future`),
-  h2("12.4 Step 4: Findings Land in Postgres"),
-  p(
-    "All three findings are inserted into the findings table, linked to the prs row for this PR. The dashboard at /dashboard refreshes within 15 seconds and shows the new PR at the top of the queue."
-  ),
-  h2("12.5 Step 5: Dashboard Reflects the New Data"),
-  p(
-    "The Live PR Queue, Findings table, and Analytics page all update on the next auto-refresh (15-second interval) or on manual refresh. The 'Live data · Postgres' pill confirms the data is sourced from the real database, not from mock fixtures."
+Push a fix — I'll re-review automatically.`),
+  h2("12.4 What Lands Where"),
+  buildTable(
+    [{ label: "Destination" }, { label: "What gets written" }],
+    [
+      [
+        { text: "GitHub PR", bold: true },
+        { text: "3 inline review comments (with suggestion blocks) + 1 summary issue comment" },
+      ],
+      [
+        { text: "Postgres prs table", bold: true },
+        { text: "1 row with repo, pr_number, title, author, head_sha" },
+      ],
+      [
+        { text: "Postgres findings table", bold: true },
+        { text: "3 rows linked to the prs row, one per finding, each with file_path + line_number + severity + category + suggestion + rationale + github_comment_id" },
+      ],
+      [
+        { text: "Dashboard", bold: true },
+        { text: "PR appears at top of /dashboard within 15 s (auto-refresh) — Live data · Postgres pill confirms it's real data, not mock" },
+      ],
+    ],
+    [2400, 6960]
   )
 );
 
