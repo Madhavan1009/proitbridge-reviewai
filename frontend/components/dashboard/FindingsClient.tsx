@@ -5,6 +5,7 @@ import { Filter, Github, Search, Sparkles } from "lucide-react";
 import { SeverityBadge } from "@/components/ui/SeverityBadge";
 import { CategoryChip } from "@/components/ui/CategoryChip";
 import { DataSourcePill } from "@/components/dashboard/DashboardClient";
+import { AutoRefreshChip } from "@/components/dashboard/AutoRefreshChip";
 import { cn, timeAgo } from "@/lib/utils";
 import type { Category, Finding, PullRequest, Severity } from "@/lib/types";
 
@@ -66,7 +67,10 @@ export function FindingsClient({
             'View on GitHub' to jump straight to the inline comment.
           </p>
         </div>
-        <DataSourcePill source={dataSource} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <DataSourcePill source={dataSource} />
+          <AutoRefreshChip />
+        </div>
       </div>
 
       {/* SEARCH + FILTERS */}

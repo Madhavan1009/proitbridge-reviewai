@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { PRRow } from "@/components/dashboard/PRRow";
+import { AutoRefreshChip } from "@/components/dashboard/AutoRefreshChip";
 import { cn } from "@/lib/utils";
 import type { DashboardStats, Finding, PullRequest } from "@/lib/types";
 
@@ -96,7 +97,10 @@ export function DashboardClient({
             old findings.
           </p>
         </div>
-        <DataSourcePill source={dataSource} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <DataSourcePill source={dataSource} />
+          <AutoRefreshChip />
+        </div>
       </div>
 
       {/* FILTER PILLS */}

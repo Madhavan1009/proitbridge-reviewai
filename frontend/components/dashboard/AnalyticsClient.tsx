@@ -13,6 +13,7 @@ import { CategoryDonut } from "@/components/dashboard/CategoryDonut";
 import { TopFilesChart } from "@/components/dashboard/TopFilesChart";
 import { AcceptRateChart } from "@/components/dashboard/AcceptRateChart";
 import { DataSourcePill } from "@/components/dashboard/DashboardClient";
+import { AutoRefreshChip } from "@/components/dashboard/AutoRefreshChip";
 import type { DashboardStats } from "@/lib/types";
 
 export function AnalyticsClient({
@@ -40,7 +41,10 @@ export function AnalyticsClient({
             it's adding value. If they don't, the prompt needs tuning.
           </p>
         </div>
-        <DataSourcePill source={dataSource} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <DataSourcePill source={dataSource} />
+          <AutoRefreshChip />
+        </div>
       </div>
 
       {/* STATS */}
