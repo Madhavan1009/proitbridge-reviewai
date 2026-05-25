@@ -729,79 +729,95 @@ content.push(
   )
 );
 
-// SCENE 7 — Open the bad PR
+// SCENE 7 — Open the bad PR (multi-file across 4 folders)
 content.push(
   ...scene(
     7,
-    "Open the Bad PR (Live)",
-    "4:30 – 5:30",
+    "Open the Bad PR — 4 Files, 4 Folders (Live)",
+    "4:30 – 6:00",
     [
       [
-        "Indha three commands run panren. Branch create, file write, push, PR open. Adhu mathiri.",
-        "Three commands — create branch, write file, push, open PR. That's it.",
+        "Demo ku, naan oru typical real-world PR mathiri create panren — 4 different files, 4 different folders.",
+        "For this demo I'll create a typical real-world PR — 4 files across 4 different folders.",
       ],
       [
-        "Indha src/auth.py la SQL injection irukku — paaru — query string la user_id ah f-string la directly interpolate pannraan. Adhu romba dangerous.",
-        "Look at src/auth.py — there's a SQL injection — the user_id is interpolated directly into the query string via f-string. Very dangerous.",
+        "Each file la oru different bug type irukku: src/auth.py la SQL injection, api/stripe.py la hardcoded API key, lib/dedup.py la O(n²) performance issue, cache/counter.py la race condition.",
+        "Each file has a different bug type: src/auth.py has SQL injection, api/stripe.py has a hardcoded API key, lib/dedup.py has an O(n²) loop, cache/counter.py has a race condition.",
       ],
       [
-        "Ippo PR open pannitu, bot enna sollum paaruvom. 10 seconds maximum.",
-        "Now let me open the PR and watch what the bot says. Max 10 seconds.",
+        "Indha sample files ellame repo la ready ah irukku — demo-bad-prs/sample-pr/ folder la. cp command oda copy panniralaam.",
+        "All these sample files are already prepared in the repo at demo-bad-prs/sample-pr/. You can just copy them with a cp command.",
+      ],
+      [
+        "Or oru runner script run panniralaam — branch create, files write, commit, push, PR open — ellame one command la. Real CI/CD style.",
+        "Or you can run a one-shot script — creates branch, writes all files, commits, pushes, opens PR — everything in one command. Real CI/CD style.",
+      ],
+      [
+        "Ippo paarunga — push aana udane GitHub webhook fire aagum, n8n per file la loop pannum, Claude ku send pannum. Romba interesting paakanum.",
+        "Watch this — as soon as it pushes, GitHub fires the webhook, n8n loops over each file and sends them to Claude. Really fun to watch.",
       ],
     ],
-    "Run the commands below in the terminal — show the editor briefly showing src/auth.py",
-    `git checkout -b demo-live-recording
-mkdir -p src
-cat > src/auth.py <<'PY'
-"""User authentication and lookup utilities."""
-import sqlite3
-db = sqlite3.connect("app.db")
+    "Show the sample-pr/ folder in the file explorer briefly. Then switch to terminal — type the cp command (or run the script).",
+    `# Option A: Copy the pre-built sample files into the demo repo
+cd /tmp/proitbridge-reviewai-demo
+git checkout main && git pull
+git checkout -b demo-multi-file
+cp -r /f/ProITBridge/AI_Code_Automation/demo-bad-prs/sample-pr/src .
+cp -r /f/ProITBridge/AI_Code_Automation/demo-bad-prs/sample-pr/api .
+cp -r /f/ProITBridge/AI_Code_Automation/demo-bad-prs/sample-pr/lib .
+cp -r /f/ProITBridge/AI_Code_Automation/demo-bad-prs/sample-pr/cache .
+git add src api lib cache
+git commit -m "Add support endpoints across auth/payments/cache modules"
+git push -u origin demo-multi-file
+gh pr create --fill --title "Add support endpoints across multiple modules"
 
-def get_user(user_id):
-    """Look up a user by ID — used by the support dashboard."""
-    query = f"SELECT * FROM users WHERE id={user_id}"
-    return db.execute(query).fetchone()
-PY
-git add src/auth.py
-git commit -m "Add user lookup endpoint for support team"
-git push -u origin demo-live-recording
-gh pr create --fill --title "Add user lookup by ID"`
+# Option B: One-shot runner script (does all of the above)
+cd /tmp/proitbridge-reviewai-demo
+node /f/ProITBridge/AI_Code_Automation/scripts/demo-live-recording.js`
   )
 );
 
-// SCENE 8 — Watch the bot review
+// SCENE 8 — Watch the bot review (multi-file findings)
 content.push(
   ...scene(
     8,
-    "Watch the Bot Review (The Magic Moment)",
-    "5:30 – 7:00",
+    "Watch the Bot Review — Multi-File Findings (The Magic Moment)",
+    "6:00 – 7:30",
     [
       [
-        "Browser la GitHub PR page open pannitu wait pannuvom. 10 seconds kulla bot vandhu inline comments post pannum.",
-        "Let's open the GitHub PR page and wait. Within 10 seconds the bot will post inline comments.",
+        "Browser la GitHub PR page open pannitu wait pannuvom. 30 seconds kulla bot vandhu — 4 files la separate ah — comments post pannum.",
+        "Let's open the GitHub PR page and wait. Within 30 seconds the bot will post comments separately on each of the 4 files.",
       ],
       [
-        "Andha! Paaru! Critical SQL injection finding vandhirukku line 10 la. Suggestion block kuda kudirukkaan — parameterized query use pannunga.",
-        "There it is! Look — Critical SQL injection finding on line 10. With a suggestion block — use parameterized query.",
+        "Andha! src/auth.py la — Critical SQL injection finding. Suggestion block oda — parameterized query use pannunga.",
+        "There — on src/auth.py — Critical SQL injection finding. With a suggestion block — use parameterized query.",
       ],
       [
-        "Innum oru comment — High severity — no tests cover this code path. Auth.py is a security boundary nu sollirukku. Apdina test coverage venum.",
-        "And another comment — High severity — no tests cover this code path. It mentions auth.py is a security boundary, so test coverage is needed.",
+        "api/stripe.py la — Critical severity — hardcoded Stripe API key. Bot sonnu, 'rotate immediately, env var use pannunga'. Real-world advice.",
+        "On api/stripe.py — Critical — hardcoded Stripe API key. The bot says 'rotate immediately, use env vars'. Real-world advice.",
       ],
       [
-        "Innum oru — Medium severity — module-level DB connection. Adhukku error handling illama, cleanup illama irukku. All three findings — within 8 seconds.",
-        "Another one — Medium severity — module-level DB connection has no error handling, no cleanup. All three findings — within 8 seconds.",
+        "lib/dedup.py la — Medium severity — O(n²) performance issue. Counter use pannunga nu suggestion kudukirathu. Python idiomatic fix.",
+        "On lib/dedup.py — Medium — O(n²) performance. It suggests using Counter — the Pythonic fix.",
       ],
       [
-        "Best part? 'Commit suggestion' button — one click la fix accept pannidalaam. No copy paste.",
-        "Best part? The 'Commit suggestion' button — one click to accept the fix. No copy-paste.",
+        "cache/counter.py la — High severity — TOCTOU race condition. Get-then-set non-atomic, atomic INCR use pannunga. Concurrency understanding paakkanum.",
+        "On cache/counter.py — High — TOCTOU race condition. Get-then-set is non-atomic, use atomic INCR. Real concurrency knowledge.",
       ],
       [
-        "Bottom la oru summary comment kuda post panniyirukku — severity table, total count. Romba clean.",
-        "At the bottom there's a summary comment too — severity table, total count. Super clean.",
+        "4 files la, 4 different categories — security, performance, bug — ellam catch panniduchu. Adhuvum ~25 seconds la.",
+        "4 files, 4 different categories — security, performance, bug — all caught in about 25 seconds.",
+      ],
+      [
+        "Bottom la summary comment — severity table, total count: 1 critical, 2 high, 3 medium. Clean dashboard ah.",
+        "Bottom has the summary comment — severity table with total counts: 1 critical, 2 high, 3 medium. Clean dashboard.",
+      ],
+      [
+        "Best part? Every suggestion oda 'Commit suggestion' button — one click la fix accept pannitu, automatic ah commit aagum. No manual copy-paste.",
+        "Best part? Every suggestion has a 'Commit suggestion' button — one click accepts the fix and auto-commits it. Zero manual copy-paste.",
       ],
     ],
-    "Refresh the GitHub PR page; comments should be visible. Zoom in on each comment as you describe it."
+    "Refresh the GitHub PR page; scroll through each file showing the bot's comments. Zoom in on the suggestion blocks."
   )
 );
 
@@ -849,12 +865,132 @@ content.push(
   )
 );
 
-// SCENE 10 — Cost + Stack
+// SCENE 10 — Bot reading limits & data flow
 content.push(
   ...scene(
     10,
+    "Bot Eppadi Read Pannum? (Limits & Coverage)",
+    "9:00 – 10:00",
+    [
+      [
+        "Common question — bot evlo lines read pannum? Whole repo a read pannumaa, leftover code old PR data ah remember pannumaa? Clarify pannrein.",
+        "Common question — how many lines does the bot read? Does it scan the whole repo? Does it remember old PR data? Let me clarify.",
+      ],
+      [
+        "First — per PR la, bot only changed files read pannum. PR la 4 files thaan modify aana, only 4 files thaan Claude ku poagum. Whole repo scan pannathu.",
+        "First — per PR, the bot only reads changed files. If a PR modifies 4 files, only those 4 files are sent to Claude. It doesn't scan the entire repo.",
+      ],
+      [
+        "Each changed file ku, bot full file content fetch pannum — diff matum illa. Adhanaal Claude ku full context kidaikum. Adhaan finding quality high ah irukum.",
+        "For each changed file, the bot fetches the full file content — not just the diff. This gives Claude full context, which is why the findings are high-quality.",
+      ],
+      [
+        "Filter rules irukku — package-lock.json, *.min.js, dist/, build/, vendor/, node_modules — ellame skip aagum. 500 lines kku mela changed irukira files-um skip aagum, noise reduce panrathukku.",
+        "There are filter rules — package-lock.json, *.min.js, dist/, build/, vendor/, node_modules — all skipped. Files with more than 500 changed lines also skipped to reduce noise.",
+      ],
+      [
+        "Per file la maximum 5 findings post aagum — top 5 important ones. Adhukku mela findings illa — quality > quantity.",
+        "Max 5 findings per file are posted — the top 5 most important. No spam beyond that — quality over quantity.",
+      ],
+      [
+        "Claude context window — Sonnet 4.5 ku 200,000 tokens (~150,000 words). Most code files <1,000 lines = ~20K tokens. Plenty of headroom.",
+        "Claude context window — Sonnet 4.5 has 200,000 tokens (~150,000 words). Most code files are <1,000 lines = ~20K tokens. Plenty of headroom.",
+      ],
+      [
+        "Old data — Postgres la ellame remember pannum: every PR, every finding, accept rate, history. Dashboard la trending analytics paakalaam.",
+        "Old data — Postgres remembers everything: every PR, every finding, accept rate, history. The dashboard shows trending analytics from that.",
+      ],
+      [
+        "But Claude itself — stateless. Each PR review independent. Bot oru PR review pannitu, next PR ku previous PR memory illa. Each review fresh ah.",
+        "But Claude itself is stateless. Each PR review is independent. The bot doesn't carry memory from one PR to the next. Every review is fresh.",
+      ],
+      [
+        "Future PRs — every new PR triggers a fresh review automatically. Bot 24/7 watching. Sleep illa, lunch break illa.",
+        "Future PRs — every new PR triggers a fresh review automatically. The bot watches 24/7. No sleep, no lunch breaks.",
+      ],
+      [
+        "Scaling limits — Railway free tier ~100 PRs/day handle pannum. Postgres free tier 1 GB = ~1 million findings vara place irukku. Most orgs ku enough.",
+        "Scaling — Railway free tier handles ~100 PRs/day. Postgres free tier (1 GB) can hold ~1 million findings. Enough for most orgs.",
+      ],
+    ],
+    "Show the workflow diagram (assets/diagram-workflow.png) — highlight the 'Filter Files' node + 'Get Content' loop"
+  )
+);
+
+// SCENE 11 — Why build this · AI engineering skills
+content.push(
+  ...scene(
+    11,
+    "Why Build This — Top 5 AI Engineering Project",
+    "10:00 – 11:30",
+    [
+      [
+        "Indha video paakra unga la some yosichirupinga — naa enaku ena gain aagum indha project build pannina? Romba valid question. Sollren.",
+        "Some of you watching might wonder — what do I gain by building this? Valid question. Let me answer.",
+      ],
+      [
+        "Indha ReviewAI — oru fully end-to-end AI engineering project. Resume la, portfolio la, interview la show panna perfect.",
+        "ReviewAI is a fully end-to-end AI engineering project. Perfect for resume, portfolio, interviews.",
+      ],
+      [
+        "Skills enna learn pannuvinga? Pathi paaru:",
+        "What skills do you actually learn? Let me list them:",
+      ],
+      [
+        "One — LLM integration. Claude API call pannrathu, prompt engineering, structured JSON output ah extract pannrathu. Reviewer.txt prompt — that's real prompt engineering.",
+        "One — LLM integration. Calling the Claude API, prompt engineering, extracting structured JSON output. The reviewer.txt is real prompt engineering.",
+      ],
+      [
+        "Two — AI workflow orchestration. Single API call kku appuram, n8n use panni multi-step pipeline build pannrathu. Real-world AI applications ellame iduvae mathiri — multi-step.",
+        "Two — AI workflow orchestration. Beyond a single API call — using n8n to build multi-step pipelines. Real-world AI apps are all like this — multi-step.",
+      ],
+      [
+        "Three — Real production deployment. Railway la n8n, Vercel la frontend, GitHub webhook integration — cloud architecture, env vars, secrets, HMAC verify — full DevOps.",
+        "Three — Real production deployment. n8n on Railway, frontend on Vercel, GitHub webhook integration — cloud architecture, env vars, secrets, HMAC — full DevOps.",
+      ],
+      [
+        "Four — Cost-aware engineering. Model selection — Haiku vs Sonnet vs Opus, per-token pricing, when to use which. Real AI engineers idhellam handle pannranga.",
+        "Four — Cost-aware engineering. Model selection — Haiku vs Sonnet vs Opus, per-token pricing, when to use which. Real AI engineers handle this daily.",
+      ],
+      [
+        "Five — Full-stack development. Next.js 14 server components, Postgres queries, real-time dashboard, live charts. Modern frontend patterns.",
+        "Five — Full-stack development. Next.js 14 server components, Postgres queries, real-time dashboard, live charts. Modern frontend patterns.",
+      ],
+      [
+        "Six — Database design. Schema for both transactional inserts AND analytical queries. Views for aggregations. Real DB architecture.",
+        "Six — Database design. A schema for both transactional inserts AND analytical queries. Views for aggregations. Real DB architecture.",
+      ],
+      [
+        "Seven — Security engineering. HMAC verification, secrets management, sandboxed Code nodes, principle of least privilege. Production-grade.",
+        "Seven — Security engineering. HMAC verification, secrets management, sandboxed Code nodes, least privilege. Production-grade.",
+      ],
+      [
+        "Eight — Product thinking. Landing page, docs, pricing, deployment guide — open source product, not just a script. Resume la 'I built and shipped a product' nu sollalaam.",
+        "Eight — Product thinking. Landing page, docs, pricing, deployment guide — open source product, not just a script. You can say 'I built and shipped a product' on your resume.",
+      ],
+      [
+        "Indha 8 skills — combined ah evvalvu interviews la differentiate pannum, theriyumaa? AI engineer roles ku oru perfect portfolio piece. ENGINEERING + AI + PRODUCT — all three.",
+        "These 8 skills combined — how much that differentiates you in interviews! A perfect portfolio piece for AI engineer roles. ENGINEERING + AI + PRODUCT — all three.",
+      ],
+      [
+        "Why we build this? Because indha mathiri practical, end-to-end AI projects romba kammi. Most tutorials oru simple API call kaapikum. Adhuku mela practical thinking venum.",
+        "Why build this? Because practical end-to-end AI projects like this are rare. Most tutorials show just a single API call. You need practical thinking beyond that.",
+      ],
+      [
+        "Indha project clone pannittu, oru week la build pannina — you'll learn 10× more than 10 separate tutorials.",
+        "Clone this project, build it in a week — you'll learn 10× more than from 10 separate tutorials.",
+      ],
+    ],
+    "Show a slide or overlay with the 8 skill bullets. Optionally show GitHub repo + stars count + deployment screenshots."
+  )
+);
+
+// SCENE 12 — Cost (was Scene 10)
+content.push(
+  ...scene(
+    12,
     "Cost a paatha?",
-    "9:00 – 9:30",
+    "11:30 – 12:00",
     [
       [
         "Cost a paatha? Romba interesting.",
@@ -877,12 +1013,12 @@ content.push(
   )
 );
 
-// SCENE 11 — Closing CTA
+// SCENE 13 — Closing CTA
 content.push(
   ...scene(
-    11,
+    13,
     "Closing & Call to Action",
-    "9:30 – 10:30",
+    "12:00 – 13:00",
     [
       [
         "So that's ProITBridge ReviewAI. Open source, free tier, self-hosted, fully functional AI code review bot.",
@@ -997,58 +1133,103 @@ vercel --prod --yes`),
 content.push(
   h1("Appendix B — Live Demo Commands Cheat Sheet"),
   p(
-    "Keep this open in a second monitor or printed page during recording. Copy-paste row by row in the terminal."
+    "Two demo modes: (A) multi-file showcase (recommended, most cinematic) or (B) single-file simple. Pick one. Keep this open on a second monitor during recording."
   ),
+  blank(),
+  h2("Mode A: Multi-File Showcase (4 files, 4 folders, 4 bug categories)"),
+  p("Best for the YouTube demo. Bot lands ~9-12 inline comments across 4 files. Total ~30 seconds."),
   buildTable(
-    [{ label: "Moment in script" }, { label: "Command" }],
+    [{ label: "Moment" }, { label: "Command" }],
     [
       [
-        { text: "Scene 6: Set up demo repo dir", bold: true },
-        { text: "cd /tmp/proitbridge-reviewai-demo && git checkout main && git pull", code: true },
-      ],
-      [
-        { text: "Scene 7: Create branch", bold: true },
-        { text: "git checkout -b demo-live-recording", code: true },
-      ],
-      [
-        { text: "Scene 7: Create the bad file (one-liner)", bold: true },
+        { text: "Reset demo repo to clean main", bold: true },
         {
-          text: "mkdir -p src && curl -sS https://raw.githubusercontent.com/Madhavan1009/proitbridge-reviewai/main/demo-bad-prs/01-sql-injection.md | head -50 > /dev/null; cat demo-bad-prs/01-sql-injection.md  # then paste code into src/auth.py",
+          text: "cd /tmp/proitbridge-reviewai-demo && git checkout main && git pull --rebase",
           code: true,
         },
       ],
       [
-        { text: "Scene 7: Commit + push", bold: true },
+        { text: "Run the one-shot runner script", bold: true },
         {
-          text: "git add src/auth.py && git commit -m 'Add user lookup endpoint' && git push -u origin demo-live-recording",
+          text: "node /f/ProITBridge/AI_Code_Automation/scripts/demo-live-recording.js",
           code: true,
         },
       ],
       [
-        { text: "Scene 7: Open PR", bold: true },
-        { text: "gh pr create --fill --title 'Add user lookup by ID'", code: true },
+        { text: "View PR in browser", bold: true },
+        { text: "gh pr view --web", code: true },
       ],
       [
-        { text: "Scene 8: Open PR in browser", bold: true },
+        { text: "Open dashboard", bold: true },
         {
-          text: "gh pr view --web   (or refresh existing tab)",
+          text: "start https://proitbridge-reviewai.vercel.app/dashboard",
           code: true,
         },
       ],
       [
-        { text: "Scene 9: Open dashboard", bold: true },
-        { text: "open https://proitbridge-reviewai.vercel.app/dashboard", code: true },
-      ],
-      [
-        { text: "After demo: Clean up", bold: true },
+        { text: "Clean up after recording", bold: true },
         {
-          text: "gh pr close <num> --comment 'demo cleanup' && git checkout main && git push origin --delete demo-live-recording",
+          text: "gh pr close <num> && git checkout main && git push origin --delete demo-multi-<timestamp>",
           code: true,
         },
       ],
     ],
     [3000, 6360]
   ),
+  blank(),
+  h2("Mode A alternative: Step-by-step (more cinematic, narrate each file)"),
+  ...code(`# Branch
+cd /tmp/proitbridge-reviewai-demo && git checkout main && git pull
+git checkout -b demo-multi-file
+
+# Copy the 4 pre-built bad files
+cp -r /f/ProITBridge/AI_Code_Automation/demo-bad-prs/sample-pr/src .
+cp -r /f/ProITBridge/AI_Code_Automation/demo-bad-prs/sample-pr/api .
+cp -r /f/ProITBridge/AI_Code_Automation/demo-bad-prs/sample-pr/lib .
+cp -r /f/ProITBridge/AI_Code_Automation/demo-bad-prs/sample-pr/cache .
+
+# Verify file layout (good visual for camera)
+ls -R src api lib cache
+
+# Commit + push + open PR
+git add src api lib cache
+git commit -m "Add support endpoints across auth/payments/cache modules"
+git push -u origin demo-multi-file
+gh pr create --fill --title "Add support endpoints across multiple modules"
+
+# Open PR in browser
+gh pr view --web`),
+  blank(),
+  h2("Mode B: Single-File Simple (auth.py only)"),
+  p("Quicker, smaller demo. Bot lands 3 comments. Total ~10 seconds."),
+  ...code(`cd /tmp/proitbridge-reviewai-demo
+git checkout main && git pull
+git checkout -b demo-single
+mkdir -p src
+cp /f/ProITBridge/AI_Code_Automation/demo-bad-prs/sample-pr/src/auth.py src/
+git add src/auth.py
+git commit -m "Add user lookup endpoint for support team"
+git push -u origin demo-single
+gh pr create --fill --title "Add user lookup by ID"`),
+  blank(),
+  h2("Windows native cmd / PowerShell equivalent"),
+  ...code(`REM Set demo repo path
+set DEMO=C:\\path\\to\\proitbridge-reviewai-demo
+set SAMPLE=F:\\ProITBridge\\AI_Code_Automation\\demo-bad-prs\\sample-pr
+
+cd /d %DEMO%
+git checkout main && git pull
+git checkout -b demo-multi-file
+
+xcopy %SAMPLE%\\src src\\ /E /I
+xcopy %SAMPLE%\\api api\\ /E /I
+xcopy %SAMPLE%\\lib lib\\ /E /I
+xcopy %SAMPLE%\\cache cache\\ /E /I
+
+git add src api lib cache
+git commit -m "Add support endpoints across multiple modules"
+git push -u origin demo-multi-file
+gh pr create --fill --title "Add support endpoints across multiple modules"`),
   blank(),
   blank(),
   h2("Reset dashboard demo data before recording"),
