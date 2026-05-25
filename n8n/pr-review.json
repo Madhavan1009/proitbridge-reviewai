@@ -310,15 +310,15 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "pr_id": "={{ $json.pr_db_id }}",
-            "file_path": "={{ $json.file_path }}",
-            "line_number": "={{ $json.line }}",
-            "severity": "={{ $json.severity }}",
-            "category": "={{ $json.category }}",
-            "message": "={{ $json.message }}",
-            "suggestion": "={{ $json.suggestion }}",
-            "rationale": "={{ $json.rationale }}",
-            "github_comment_id": "={{ $('Post Inline Comment').item.json.id }}"
+            "pr_id": "={{ $('Split Findings').item.json.pr_db_id }}",
+            "file_path": "={{ $('Split Findings').item.json.file_path }}",
+            "line_number": "={{ $('Split Findings').item.json.line }}",
+            "severity": "={{ $('Split Findings').item.json.severity }}",
+            "category": "={{ $('Split Findings').item.json.category }}",
+            "message": "={{ $('Split Findings').item.json.message }}",
+            "suggestion": "={{ $('Split Findings').item.json.suggestion }}",
+            "rationale": "={{ $('Split Findings').item.json.rationale }}",
+            "github_comment_id": "={{ $json.id }}"
           }
         },
         "options": {}
